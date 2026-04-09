@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Social Browser</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #0f0f0f; color: #fff;
+         height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ─── Top bar ─── */
+  #topbar {
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  #appTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  /* ─── Platform buttons ─── */
+  .pBtns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #444;
+    background: #2a2a2a;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pBtn:hover { background: #3a3a3a; border-color: #666; color: #fff; }
+  .pBtn.active { border-color: transparent; color: #fff; }
+
+  .pBtn[data-p="youtube"].active  { background: #ff0000; }
+  .pBtn[data-p="instagram"].active { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
+  .pBtn[data-p="tiktok"].active   { background: #010101; border-color: #69C9D0; }
+  .pBtn[data-p="twitter"].active  { background: #000; border-color: #1d9bf0; }
+  .pBtn[data-p="facebook"].active { background: #1877f2; }
+  .pBtn[data-p="reddit"].active   { background: #ff4500; }
+  .pBtn[data-p="telegram"].active { background: #2ca5e0; }
+  .pBtn[data-p="linkedin"].active { background: #0a66c2; }
+
+  /* ─── Address bar ─── */
+  #addrBar {
+    flex: 1;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 0 10px;
+    height: 34px;
+  }
+  #addrBar span { font-size: 11px; color: #888; white-space: nowrap; }
+  #addrInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #aaa;
+    font-size: 12px;
+    min-width: 0;
+    direction: ltr;
+  }
+
+  /* nav buttons */
+  .navBtn {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.1s;
+    flex-shrink: 0;
+  }
+  .navBtn:hover { background: #333; color: #fff; }
+  .navBtn:disabled { opacity: 0.3; cursor: default; }
+
+  /* ─── Browser frame ─── */
+  #browserFrame {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #siteFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* ─── Landing screen ─── */
+  #landing {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0f0f0f;
+    gap: 28px;
+    padding: 24px;
+  }
+  #landing h2 { font-size: 20px; color: #fff; font-weight: 500; }
+  #landing p  { font-size: 14px; color: #888; text-align: center; }
+
+  .socialGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    width: 100%;
+    max-width: 580px;
+  }
+
+  .socialCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 10px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .socialCard:hover { background: #252525; border-color: #555; transform: translateY(-2px); }
+  .socialCard .ico { font-size: 28px; }
+  .socialCard .lbl { font-size: 12px; color: #ccc; font-weight: 500; }
+
+  /* ─── Loading overlay ─── */
+  #loadOverlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 10;
+  }
+  #loadOverlay.show { display: flex; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid #333;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loadText { font-size: 13px; color: #aaa; }
+
+  /* ─── Error screen ─── */
+  #errorBox {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: #0f0f0f;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+  #errorBox.show { display: flex; }
+  #errorBox h3 { color: #ff6b6b; font-size: 16px; }
+  #errorBox p  { color: #888; font-size: 13px; max-width: 400px; line-height: 1.6; }
+  #errorBox .retry { padding: 8px 20px; border-radius: 8px; border: 1px solid #555;
+    background: #2a2a2a; color: #fff; cursor: pointer; font-size: 13px; }
+
+  /* status bar */
+  #statusBar {
+    background: #111;
+    border-top: 1px solid #222;
+    padding: 3px 12px;
+    font-size: 11px;
+    color: #555;
+    flex-shrink: 0;
+    direction: ltr;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── Top Bar ─── -->
+<div id="topbar">
+  <span id="appTitle">🌐 Social</span>
+
+  <div class="pBtns">
+    <button class="pBtn" data-p="youtube"   onclick="go('https://www.youtube.com',   this)">▶ YouTube</button>
+    <button class="pBtn" data-p="instagram" onclick="go('https://www.instagram.com', this)">📸 Instagram</button>
+    <button class="pBtn" data-p="tiktok"    onclick="go('https://www.tiktok.com',    this)">🎵 TikTok</button>
+    <button class="pBtn" data-p="twitter"   onclick="go('https://x.com',             this)">🐦 X</button>
+    <button class="pBtn" data-p="facebook"  onclick="go('https://www.facebook.com',  this)">👥 Facebook</button>
+    <button class="pBtn" data-p="reddit"    onclick="go('https://www.reddit.com',    this)">🔴 Reddit</button>
+    <button class="pBtn" data-p="telegram"  onclick="go('https://web.telegram.org',  this)">✈ Telegram</button>
+    <button class="pBtn" data-p="linkedin"  onclick="go('https://www.linkedin.com',  this)">💼 LinkedIn</button>
+  </div>
+
+  <button class="navBtn" id="btnBack"    onclick="histBack()"    title="אחורה" disabled>◀</button>
+  <button class="navBtn" id="btnForward" onclick="histForward()" title="קדימה" disabled>▶</button>
+  <button class="navBtn" onclick="reload()" title="רענן">↺</button>
+
+  <div id="addrBar">
+    <span>🔒</span>
+    <input id="addrInput" type="text" placeholder="כתובת אתר..." readonly />
+  </div>
+</div>
+
+<!-- ─── Browser Frame ─── -->
+<div id="browserFrame">
+
+  <!-- Landing -->
+  <div id="landing">
+    <h2>בחר רשת חברתית</h2>
+    <p>לחץ על אחת מהרשתות למטה כדי להיכנס אליה ישירות</p>
+    <div class="socialGrid">
+      <div class="socialCard" onclick="go('https://www.youtube.com',   qBtn('youtube'))">
+        <span class="ico">▶️</span><span class="lbl">YouTube</span>
+      </div>
+      <div class="socialCard" onclick="go('https://www.instagram.com', qBtn('instagram'))">
+        <span class="ico">📸</span><span class="lbl">Instagram</span>
+      </div>
+      <div class="socialCard" onclick="go('https://www.tiktok.com',    qBtn('tiktok'))">
+        <span class="ico">🎵</span><span class="lbl">TikTok</span>
+      </div>
+      <div class="socialCard" onclick="go('https://x.com',             qBtn('twitter'))">
+        <span class="ico">🐦</span><span class="lbl">X / Twitter</span>
+      </div>
+      <div class="socialCard" onclick="go('https://www.facebook.com',  qBtn('facebook'))">
+        <span class="ico">👥</span><span class="lbl">Facebook</span>
+      </div>
+      <div class="socialCard" onclick="go('https://www.reddit.com',    qBtn('reddit'))">
+        <span class="ico">🔴</span><span class="lbl">Reddit</span>
+      </div>
+      <div class="socialCard" onclick="go('https://web.telegram.org',  qBtn('telegram'))">
+        <span class="ico">✈️</span><span class="lbl">Telegram</span>
+      </div>
+      <div class="socialCard" onclick="go('https://www.linkedin.com',  qBtn('linkedin'))">
+        <span class="ico">💼</span><span class="lbl">LinkedIn</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loadOverlay">
+    <div class="spinner"></div>
+    <div id="loadText">טוען...</div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorBox">
+    <h3>⚠️ לא ניתן לטעון את הדף</h3>
+    <p id="errorMsg">האתר חסם את הגישה דרך הפרוקסי. נסה לפתוח ישירות בטאב חדש.</p>
+    <button class="retry" onclick="openDirect()">פתח ישירות בטאב חדש</button>
+    <button class="retry" onclick="showLanding()">חזור לדף הבית</button>
+  </div>
+
+  <!-- iframe -->
+  <iframe id="siteFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+</div>
+
+<div id="statusBar">מוכן</div>
+
+<script>
+  var history = [];
+  var histIndex = -1;
+  var currentUrl = '';
+
+  function qBtn(p) {
+    return document.querySelector('.pBtn[data-p="' + p + '"]');
+  }
+
+  function setActive(btn) {
+    document.querySelectorAll('.pBtn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  }
+
+  function showLanding() {
+    document.getElementById('landing').style.display = 'flex';
+    document.getElementById('siteFrame').srcdoc = '';
+    document.getElementById('errorBox').classList.remove('show');
+    document.getElementById('loadOverlay').classList.remove('show');
+    document.getElementById('addrInput').value = '';
+    document.getElementById('statusBar').textContent = 'מוכן';
+    setActive(null);
+    currentUrl = '';
+  }
+
+  function go(url, btn) {
+    if (!url) return;
+    currentUrl = url;
+    setActive(btn);
+    document.getElementById('landing').style.display = 'none';
+    document.getElementById('errorBox').classList.remove('show');
+    document.getElementById('loadOverlay').classList.add('show');
+    document.getElementById('loadText').textContent = 'טוען ' + url.replace(/https?:\/\//,'').split('/')[0] + '...';
+    document.getElementById('addrInput').value = url;
+    document.getElementById('statusBar').textContent = url;
+
+    // push history
+    if (histIndex < history.length - 1) history = history.slice(0, histIndex + 1);
+    history.push(url);
+    histIndex = history.length - 1;
+    updateNavBtns();
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('loadOverlay').classList.remove('show');
+        if (result.ok) {
+          document.getElementById('siteFrame').srcdoc = result.html;
+          document.getElementById('addrInput').value = result.url;
+          document.getElementById('statusBar').textContent = result.url;
+        } else {
+          showError(result.error, url);
+        }
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('loadOverlay').classList.remove('show');
+        showError(e.message, url);
+      })
+      .getPage(url);
+  }
+
+  function showError(msg, url) {
+    document.getElementById('errorMsg').textContent =
+      'לא ניתן לטעון: ' + (url||'') + '\n' + (msg||'האתר חסם גישה דרך פרוקסי.');
+    document.getElementById('errorBox').classList.add('show');
+  }
+
+  function openDirect() {
+    if (currentUrl) window.open(currentUrl, '_blank');
+  }
+
+  function reload() {
+    if (currentUrl) go(currentUrl, document.querySelector('.pBtn.active'));
+  }
+
+  function histBack() {
+    if (histIndex > 0) { histIndex--; go(history[histIndex], null); }
+  }
+
+  function histForward() {
+    if (histIndex < history.length - 1) { histIndex++; go(history[histIndex], null); }
+  }
+
+  function updateNavBtns() {
+    document.getElementById('btnBack').disabled    = histIndex <= 0;
+    document.getElementById('btnForward').disabled = histIndex >= history.length - 1;
+  }
+
+  // intercept navigation from iframe
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'nav' && e.data.url) {
+      var url = e.data.url;
+      if (url.startsWith('http')) {
+        var btn = document.querySelector('.pBtn.active');
+        go(url, btn);
+      }
+    }
+  });
+</script>
+</body>
+</html>
